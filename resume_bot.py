@@ -7,8 +7,23 @@ import sys
 import time
 from datetime import datetime
 
-# Veb-server uchun (Render talabi)
+# --- RENDER UCHUN MUHIM QISM (BUNI ALBATTA QO'SHISH KERAK) ---
 from aiohttp import web
+
+async def health_check(request):
+    return web.Response(text="Bot ishlab turibdi! (Render uchun)")
+
+async def start_web_server():
+    app = web.Application()
+    app.router.add_get('/', health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    # Render PORTni o'zi beradi, agar bermasa 8080 ni oladi
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logging.info(f"==> Veb server {port}-portda ishga tushdi! <==")
+# -------------------------------------------------------------
 
 # Word uchun
 from docx import Document
@@ -36,27 +51,10 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 # ---------------------------------------------------------
 # SOZLAMALAR
 # ---------------------------------------------------------
-# Renderda Environment Variable orqali olish yaxshiroq, lekin hozircha shu turgani ma'qul
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8593426346:AAG9mRz-mYs79vTalBK-twGcQFTu7JbGAFo")
 SUPER_ADMIN_ID = 5341602920 
 DB_FILE = "resume_bot_final.db"
 TIMEOUT_SECONDS = 300 
-
-# --- RENDER UCHUN SOXTA SERVER (START) ---
-async def health_check(request):
-    return web.Response(text="Bot ishlab turibdi! (Render uchun)")
-
-async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', health_check)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    # Render PORT environment o'zgaruvchisini beradi, default 8080
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    logging.info(f"Veb server {port}-portda ishga tushdi")
-# --- RENDER UCHUN SOXTA SERVER (END) ---
 
 # --- MIDDLEWARE (Vaqt nazorati) ---
 class TimeoutMiddleware(BaseMiddleware):
@@ -557,12 +555,13 @@ async def confirm(call: types.CallbackQuery, state: FSMContext):
 
 async def main():
     setup_database()
+    # Loglarni ekranga chiqarish (Render ko'rishi uchun)
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     
-    # Renderda ishlash uchun soxta veb serverni ishga tushirish
+    # 1. Serverni ishga tushiramiz (Render uchun)
     await start_web_server()
     
-    # Botni ishga tushirish
+    # 2. Botni ishga tushiramiz (Telegram uchun)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
