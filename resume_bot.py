@@ -52,7 +52,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 # SOZLAMALAR
 # ---------------------------------------------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8593426346:AAG9mRz-mYs79vTalBK-twGcQFTu7JbGAFo")
-SUPER_ADMIN_ID = 5341602920 
+SUPER_ADMIN_ID = 5341602920,356009218 
 DB_FILE = "resume_bot_final.db"
 TIMEOUT_SECONDS = 300 
 
