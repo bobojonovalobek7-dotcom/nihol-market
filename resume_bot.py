@@ -2,23 +2,22 @@ import asyncio
 import sqlite3
 import logging
 import os
-import sys
 from datetime import datetime
 
-from aiogram import Bot, Dispatcher, F
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    KeyboardButton, Message, InlineKeyboardButton, 
-    InlineKeyboardMarkup, CallbackQuery
+    KeyboardButton, Message, ReplyKeyboardMarkup, 
+    InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 )
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 # ================= SOZLAMALAR =================
-# Tokenni serverda Environment Variable qilib belgilash tavsiya etiladi
+# Serverda BOT_TOKEN ni Environment Variable qilib berish tavsiya etiladi, yoki shu yerga yozing
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
 ADMIN_IDS = [356009218, 5341602920]  # Super Adminlar
 DB_FILE = "resume_bot_final.db"
@@ -54,7 +53,9 @@ TEXTS = {
         'resume_accepted': "✅ <b>Qabul qilindi!</b>\nAdminlarimiz tez orada siz bilan bog'lanishadi.",
         'resume_cancelled': "⚠️ <b>Amaliyot bekor qilindi.</b>",
         'err_age': "⚠️ <b>Xato!</b> Iltimos, yoshingizni faqat raqamda kiriting (Masalan: 25):",
-        # Admin xabarnomasi
+        # Admin xabarnomasi (Yangi User)
+        'new_user_alert': "👤 <b>Yangi foydalanuvchi qo'shildi!</b>\n\n🆔 ID: <code>{id}</code>\n🔗 Username: @{user}\nIsmi: {name}",
+        # Admin xabarnomasi (Yangi Rezyume)
         'new_resume_admin': (
             "🔔 <b>DIQQAT: YANGI NOMZOD QO'SHILDI!</b> 🔔\n"
             "━━━━━━━━━━━━━━━━━━━━━\n"
@@ -69,7 +70,7 @@ TEXTS = {
     }
 }
 
-# ================= DATABASE (OPTIMAL) =================
+# ================= DATABASE (BAZA) =================
 def db_query(query, params=(), commit=False, fetchall=False, fetchone=False):
     try:
         with sqlite3.connect(DB_FILE) as conn:
@@ -79,7 +80,7 @@ def db_query(query, params=(), commit=False, fetchall=False, fetchone=False):
             if fetchall: return cursor.fetchall()
             if fetchone: return cursor.fetchone()
     except Exception as e:
-        logging.error(f"DB Error: {e}")
+        logging.error(f"Database Error: {e}")
         return None
 
 def setup_database():
@@ -89,9 +90,7 @@ def setup_database():
             
             # 1. Adminlar jadvali
             cursor.execute("CREATE TABLE IF NOT EXISTS admins (user_id INTEGER PRIMARY KEY, role TEXT)")
-            
-            # --- MUHIM: Adminlarni bittalab qo'shish ---
-            # Bu yerda hech qachon xato bermaydi, chunki biz ro'yxatni emas, sonni beryapmiz.
+            # Adminlarni bittalab qo'shamiz (Serverdagi xatolikni oldini olish uchun)
             for admin_id in ADMIN_IDS:
                 cursor.execute("INSERT OR IGNORE INTO admins (user_id, role) VALUES (?, 'super_admin')", (admin_id,))
             
@@ -107,12 +106,13 @@ def setup_database():
             
             # 4. Vakansiyalar
             cursor.execute("CREATE TABLE IF NOT EXISTS vacancies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT)")
+            
             conn.commit()
-            logging.info("Baza muvaffaqiyatli yuklandi.")
     except Exception as e:
         logging.critical(f"Baza yaratishda xatolik: {e}")
 
-# ================= KEYBOARDS =================
+# ================= KEYBOARDS (MENYULAR) =================
+# Oddiy foydalanuvchi menyusi
 def get_user_kb(in_process=False):
     builder = ReplyKeyboardBuilder()
     if in_process:
@@ -123,9 +123,11 @@ def get_user_kb(in_process=False):
         builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
+# ADMIN menyusi (YANGILANDI: Qayta ishga tushirish qo'shildi)
 def get_admin_kb():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text=TEXTS['uz']['btn_view_resumes']), KeyboardButton(text=TEXTS['uz']['btn_stats']))
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_restart_user'])) # <-- Admin uchun ham qo'shildi
     return builder.as_markup(resize_keyboard=True)
 
 # ================= STATES =================
@@ -138,39 +140,54 @@ class ResumeFSM(StatesGroup):
 dp = Dispatcher(storage=MemoryStorage())
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 
-# --- START ---
+# --- START (YANGI FOYDALANUVCHINI ANIQLASH) ---
 @dp.message(CommandStart())
 @dp.message(F.text == TEXTS['uz']['btn_start'])
 @dp.message(F.text == TEXTS['uz']['btn_restart_user'])
 async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
+    username = message.from_user.username if message.from_user.username else "NoUsername"
+    full_name = message.from_user.first_name
     
-    # Bazaga jimgina qo'shish
-    db_query("INSERT OR IGNORE INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
-             (user_id, message.from_user.username, message.from_user.first_name), commit=True)
+    # 1. Foydalanuvchi avval bormi, tekshiramiz?
+    user_exist = db_query("SELECT user_id FROM users WHERE user_id = ?", (user_id,), fetchone=True)
     
+    # 2. Agar YO'Q bo'lsa -> Bazaga qo'shamiz va Adminga xabar beramiz
+    if not user_exist:
+        db_query("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
+                 (user_id, username, full_name), commit=True)
+        
+        # Yangi foydalanuvchi haqida Adminlarga xabar
+        alert_msg = TEXTS['uz']['new_user_alert'].format(id=user_id, user=username, name=full_name)
+        for adm in ADMIN_IDS:
+            try:
+                await bot.send_message(adm, alert_msg)
+            except: pass
+    
+    # 3. Menyularni ajratish
     if user_id in ADMIN_IDS:
         await message.answer(TEXTS['uz']['welcome_admin'], reply_markup=get_admin_kb())
     else:
         await message.answer(TEXTS['uz']['welcome_user'], reply_markup=get_user_kb())
 
-# --- ADMIN PANEL ---
+# --- ADMIN PANEL FUNKSIYALARI ---
 @dp.message(F.text == TEXTS['uz']['btn_stats'])
 async def admin_stats(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
-    count_res = db_query("SELECT COUNT(*) FROM resumes", fetchone=True)
-    count_users = db_query("SELECT COUNT(*) FROM users", fetchone=True)
     
-    # Xatolikni oldini olish uchun tekshiramiz
-    r_count = count_res[0] if count_res else 0
-    u_count = count_users[0] if count_users else 0
+    res_count = db_query("SELECT COUNT(*) FROM resumes", fetchone=True)
+    usr_count = db_query("SELECT COUNT(*) FROM users", fetchone=True)
     
-    await message.answer(f"📊 <b>STATISTIKA</b>\n\n👥 Foydalanuvchilar: {u_count}\n📄 Rezyumelar: {r_count}")
+    r_c = res_count[0] if res_count else 0
+    u_c = usr_count[0] if usr_count else 0
+    
+    await message.answer(f"📊 <b>STATISTIKA</b>\n\n👥 Jami foydalanuvchilar: {u_c}\n📄 Topshirilgan rezyumelar: {r_c}")
 
 @dp.message(F.text == TEXTS['uz']['btn_view_resumes'])
 async def admin_view_resumes(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
+    
     resumes = db_query("SELECT id, full_name, position FROM resumes ORDER BY id DESC LIMIT 10", fetchall=True)
     
     if not resumes:
@@ -181,21 +198,38 @@ async def admin_view_resumes(message: Message):
     for res in resumes:
         kb.add(InlineKeyboardButton(text=f"{res[1]} | {res[2]}", callback_data=f"view_{res[0]}"))
     kb.adjust(1)
-    await message.answer("📂 <b>So'nggi rezyumelar:</b>", reply_markup=kb.as_markup())
+    await message.answer("📂 <b>So'nggi 10 ta rezyume:</b>", reply_markup=kb.as_markup())
 
 @dp.callback_query(F.data.startswith("view_"))
 async def view_resume_detail(call: CallbackQuery):
     resume_id = call.data.split("_")[1]
     data = db_query("SELECT * FROM resumes WHERE id = ?", (resume_id,), fetchone=True)
+    
     if data:
-        caption = (f"👤 <b>NOMZOD:</b> {data[2]}\n📅 <b>Yosh:</b> {data[4]}\n📞 <b>Tel:</b> {data[9]}\n"
-                   f"💼 <b>Lavozim:</b> {data[12]}\n📊 <b>Ball:</b> {data[18]}\n📍 <b>Manzil:</b> {data[6]}\n"
-                   f"🕒 <b>Vaqt:</b> {data[19]}")
+        caption = (
+            f"👤 <b>NOMZOD:</b> {data[2]}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📅 <b>Yosh:</b> {data[4]}  |  <b>Jins:</b> {data[5]}\n"
+            f"🎂 <b>Tug'ilgan sana:</b> {data[3]}\n"
+            f"📍 <b>Manzil:</b> {data[6]}\n"
+            f"📞 <b>Tel:</b> {data[9]}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"💼 <b>Lavozim:</b> {data[12]}\n"
+            f"📝 <b>Tajriba:</b> {data[11]}\n"
+            f"🏢 <b>Oldingi ish:</b> {data[10]}\n"
+            f"💻 <b>Bilimlari:</b> {data[15]}\n"
+            f"🎨 <b>Hobbi:</b> {data[14]}\n"
+            f"🎯 <b>Maqsad:</b> {data[16]}\n"
+            f"🤝 <b>Kafil:</b> {data[17]}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 <b>Ball:</b> {data[18]}\n"
+            f"🕒 <b>Vaqt:</b> {data[19]}"
+        )
         try: await call.message.answer_photo(photo=data[13], caption=caption)
         except: await call.message.answer(caption)
     await call.answer()
 
-# --- REZYUME PROCESS ---
+# --- REZYUME TO'LDIRISH JARAYONI ---
 @dp.message(F.text == TEXTS['uz']['btn_quit'])
 async def quit_handler(message: Message, state: FSMContext):
     await state.clear()
@@ -221,7 +255,11 @@ async def s2(message: Message, state: FSMContext):
 async def s3(message: Message, state: FSMContext):
     if not message.text.isdigit(): return await message.answer(TEXTS['uz']['err_age'], reply_markup=get_user_kb(in_process=True))
     await state.update_data(age=int(message.text)); await state.set_state(ResumeFSM.gender)
-    await message.answer(TEXTS['uz']['ask_gender'], reply_markup=ReplyKeyboardBuilder().add(KeyboardButton(text="Erkak"), KeyboardButton(text="Ayol")).row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit'])).as_markup(resize_keyboard=True))
+    
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="Erkak"), KeyboardButton(text="Ayol"))
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit']))
+    await message.answer(TEXTS['uz']['ask_gender'], reply_markup=builder.as_markup(resize_keyboard=True))
 
 @dp.message(ResumeFSM.gender)
 async def s4(message: Message, state: FSMContext):
@@ -231,12 +269,20 @@ async def s4(message: Message, state: FSMContext):
 @dp.message(ResumeFSM.address)
 async def s5(message: Message, state: FSMContext):
     await state.update_data(address=message.text); await state.set_state(ResumeFSM.location)
-    await message.answer(TEXTS['uz']['ask_location'], reply_markup=ReplyKeyboardBuilder().add(KeyboardButton(text="📍 Lokatsiya", request_location=True)).row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit'])).as_markup(resize_keyboard=True))
+    
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="📍 Lokatsiya", request_location=True))
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit']))
+    await message.answer(TEXTS['uz']['ask_location'], reply_markup=builder.as_markup(resize_keyboard=True))
 
 @dp.message(ResumeFSM.location, F.location)
 async def s6(message: Message, state: FSMContext):
     await state.update_data(lat=message.location.latitude, lon=message.location.longitude); await state.set_state(ResumeFSM.phone_number)
-    await message.answer(TEXTS['uz']['ask_phone'], reply_markup=ReplyKeyboardBuilder().add(KeyboardButton(text="📞 Kontaktni yuborish", request_contact=True)).row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit'])).as_markup(resize_keyboard=True))
+    
+    builder = ReplyKeyboardBuilder()
+    builder.add(KeyboardButton(text="📞 Kontaktni yuborish", request_contact=True))
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit']))
+    await message.answer(TEXTS['uz']['ask_phone'], reply_markup=builder.as_markup(resize_keyboard=True))
 
 @dp.message(ResumeFSM.phone_number, F.contact | F.text)
 async def s7(message: Message, state: FSMContext):
@@ -295,6 +341,7 @@ async def s15(message: Message, state: FSMContext):
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ TASDIQLASH", callback_data="conf_final")]])
     await message.answer_photo(data['photo'], caption=cap, reply_markup=kb)
 
+# --- TASDIQLASH VA ADMINNI XABARDOR QILISH ---
 @dp.callback_query(F.data == "conf_final")
 async def process_confirm(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
@@ -319,6 +366,7 @@ async def process_confirm(call: CallbackQuery, state: FSMContext):
         except: pass
 
     await call.message.delete()
+    # Foydalanuvchi Admin bo'lsa -> Admin menyu, bo'lmasa -> User menyu qaytaramiz
     kb = get_admin_kb() if call.from_user.id in ADMIN_IDS else get_user_kb()
     await call.message.answer("🎉 " + TEXTS['uz']['resume_accepted'], reply_markup=kb)
     await state.clear()
