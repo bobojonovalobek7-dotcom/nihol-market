@@ -19,7 +19,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 # ================= SOZLAMALAR =================
 # Tokenni serverda Environment Variable qilib belgilash tavsiya etiladi
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8593426346:AAG9mRz-mYs79vTalBK-twGcQFTu7JbGAFo")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
 ADMIN_IDS = [356009218, 5341602920]  # Super Adminlar
 DB_FILE = "resume_bot_final.db"
 
