@@ -197,7 +197,7 @@ async def admin_stats(message: Message):
 @dp.message(F.text == "📂 Rezyumelar")
 async def admin_view_resumes(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
-    resumes = await db_execute("SELECT id, full_name, position FROM resumes ORDER BY id DESC LIMIT 10", fetchall=True)
+    resumes = await db_execute("SELECT id, full_name, position FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
     if not resumes: return await message.answer("📭 Bo'sh")
     
     kb = InlineKeyboardBuilder()
