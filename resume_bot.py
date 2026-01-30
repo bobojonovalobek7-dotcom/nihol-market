@@ -19,7 +19,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 # ================= SOZLAMALAR (CONFIG) =================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
-ADMIN_IDS = [356009218, 5341602920]  # Super Adminlar
+ADMIN_IDS = [356009218, 5341602920, 5777142647]  # Super Adminlar
 DB_FILE = "resume_bot_final.db"
 
 # Loglarni sozlash
