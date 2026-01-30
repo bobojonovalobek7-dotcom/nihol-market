@@ -18,12 +18,11 @@ from aiogram.types import (
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 # ================= SOZLAMALAR (CONFIG) =================
-# Tokenni server muhitidan olish xavfsizroq, lekin shu yerga yozsa ham bo'ladi
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
 ADMIN_IDS = [356009218, 5341602920]  # Super Adminlar
 DB_FILE = "resume_bot_final.db"
 
-# Loglarni sozlash (Xatolarni ko'rish uchun)
+# Loglarni sozlash
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # ================= TEXTS (MATNLAR) =================
@@ -38,22 +37,22 @@ TEXTS = {
         # Admin tugmalari
         'btn_view': "📂 Rezyumelar",
         'btn_stats': "📊 Statistika",
-        # Savollar
+        # Savollar (Raqamlar to'g'irlandi)
         'ask_name': "1. <b>F.I.O</b> to'liq kiriting:\n<i>Masalan: Bobojonov Alobek</i>",
         'ask_birth': "2. <b>Tug'ilgan sanangiz</b> (kun.oy.yil):\n<i>Masalan: 25.10.1998</i>",
         'ask_age': "3. <b>Yoshingiz</b> (faqat raqamda):\n<i>Masalan: 26</i>",
         'ask_gender': "4. <b>Jinsingizni tanlang:</b>",
         'ask_address': "5. <b>Manzilingizni kiriting:</b>\n<i>Masalan: Urganch shahri, Al-Xorazmiy ko'chasi 12-uy</i>",
-        'ask_location': "6. <b>📍 Lokatsiyangizni yuboring:</b> (Pastdagi tugmani bosing)",
-        'ask_phone': "7. <b>📞 Telefon raqamingizni yuboring:</b>",
-        'ask_prev_job': "8. <b>Oldingi ish joyingiz:</b>\n<i>Masalan: 'Nihol' marketi yoki 'Yo'q'</i>",
-        'ask_exp': "9. <b>Ish tajribangiz:</b>\n<i>Masalan: 2 yil sotuvchi bo'lib ishlaganman</i>",
-        'ask_position': "10. <b>Lavozimni tanlang:</b>",
-        'ask_photo': "11. <b>🖼 Rasm (3x4) yuboring:</b>",
-        'ask_hobby': "12. <b>Qiziqishlaringiz (hobbi):</b>\n<i>Masalan: Kitob o'qish, Futbol</i>",
-        'ask_skills': "13. <b>Bilimlaringiz (Til, Kompyuter):</b>\n<i>Masalan: Rus tili (a'lo), Excel</i>",
-        'ask_purpose': "14. <b>Ishdan maqsad:</b>\n<i>Masalan: Jamoaga foyda keltirish va rivojlanish</i>",
-        'ask_guarantor': "15. <b>Kafil (Ism, Tel):</b>\n<i>Masalan: Alimov Vali, +998901234567</i>",
+        # Lokatsiya olib tashlandi, endi 6-savol telefon
+        'ask_phone': "6. <b>📞 Telefon raqamingizni yuboring:</b>",
+        'ask_prev_job': "7. <b>Oldingi ish joyingiz:</b>\n<i>Masalan: 'Nihol' marketi yoki 'Yo'q'</i>",
+        'ask_exp': "8. <b>Ish tajribangiz:</b>\n<i>Masalan: 2 yil sotuvchi bo'lib ishlaganman</i>",
+        'ask_position': "9. <b>Lavozimni tanlang:</b>",
+        'ask_photo': "10. <b>🖼 Rasm (3x4) yuboring:</b>",
+        'ask_hobby': "11. <b>Qiziqishlaringiz (hobbi):</b>\n<i>Masalan: Kitob o'qish, Futbol</i>",
+        'ask_skills': "12. <b>Bilimlaringiz (Til, Kompyuter):</b>\n<i>Masalan: Rus tili (a'lo), Excel</i>",
+        'ask_purpose': "13. <b>Ishdan maqsad:</b>\n<i>Masalan: Jamoaga foyda keltirish va rivojlanish</i>",
+        'ask_guarantor': "14. <b>Kafil (Ism, Tel):</b>\n<i>Masalan: Alimov Vali, +998901234567</i>",
         'resume_accepted': "✅ <b>Qabul qilindi!</b>\nAdminlarimiz tez orada siz bilan bog'lanishadi.",
         'resume_cancelled': "⚠️ <b>Amaliyot bekor qilindi.</b>",
         'err_age': "⚠️ <b>Xato!</b> Iltimos, yoshingizni faqat raqamda kiriting (Masalan: 25):",
@@ -73,7 +72,6 @@ TEXTS = {
 }
 
 # ================= DATABASE ENGINE (OPTIMAL & ASINXRON) =================
-# Bu funksiya bazaga so'rovlarni alohida thread'da bajaradi, bot qotib qolmaydi.
 async def db_execute(query, params=(), fetchone=False, fetchall=False, commit=False):
     def _run():
         try:
@@ -87,29 +85,23 @@ async def db_execute(query, params=(), fetchone=False, fetchall=False, commit=Fa
         except sqlite3.Error as e:
             logging.error(f"DATABASE ERROR: {e}")
             return None
-    
     return await asyncio.to_thread(_run)
 
-# Baza strukturasini yaratish
 async def setup_database():
     logging.info("Baza sozlanmoqda...")
-    
-    # 1. Adminlar
     await db_execute("CREATE TABLE IF NOT EXISTS admins (user_id INTEGER PRIMARY KEY, role TEXT)", commit=True)
     for admin_id in ADMIN_IDS:
         await db_execute("INSERT OR IGNORE INTO admins (user_id, role) VALUES (?, 'super_admin')", (admin_id,), commit=True)
 
-    # 2. Foydalanuvchilar
     await db_execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, full_name TEXT)", commit=True)
-
-    # 3. Rezyumelar
+    
+    # Bazada latitude/longitude ustunlari qolaveradi (xato bermasligi uchun), lekin biz ularga 0 yozamiz
     await db_execute("""CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, full_name TEXT, birth_date TEXT, 
         age INTEGER, gender TEXT, address TEXT, latitude REAL, longitude REAL, phone_number TEXT, 
         previous_job TEXT, experience TEXT, position TEXT, photo_id TEXT, hobby TEXT, skills TEXT, 
         purpose TEXT, guarantor TEXT, score INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""", commit=True)
 
-    # 4. Vakansiyalar
     await db_execute("CREATE TABLE IF NOT EXISTS vacancies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT)", commit=True)
     logging.info("Baza tayyor!")
 
@@ -127,13 +119,14 @@ def get_user_kb(in_process=False):
 def get_admin_kb():
     builder = ReplyKeyboardBuilder()
     builder.row(KeyboardButton(text=TEXTS['uz']['btn_view']), KeyboardButton(text=TEXTS['uz']['btn_stats']))
-    builder.row(KeyboardButton(text=TEXTS['uz']['btn_restart'])) # Admin uchun ham restart bor
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_restart'])) 
     return builder.as_markup(resize_keyboard=True)
 
 # ================= STATES =================
 class ResumeFSM(StatesGroup):
     full_name = State(); birth_date = State(); age = State(); gender = State(); address = State()
-    location = State(); phone_number = State(); previous_job = State(); experience = State()
+    # Location state olib tashlandi
+    phone_number = State(); previous_job = State(); experience = State()
     position = State(); photo = State(); hobby = State(); skills = State(); purpose = State(); guarantor = State()
 
 # ================= HANDLERS =================
@@ -150,23 +143,16 @@ async def cmd_start(message: Message, state: FSMContext):
     username = message.from_user.username or "NoUsername"
     full_name = message.from_user.first_name
     
-    # Foydalanuvchini tekshiramiz
     user_exist = await db_execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,), fetchone=True)
     
-    # Agar yangi bo'lsa -> Bazaga yozamiz + Adminlarga xabar
     if not user_exist:
         await db_execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
                          (user_id, username, full_name), commit=True)
-        
-        # Yangi foydalanuvchi xabarnomasi
         alert = TEXTS['uz']['new_user_alert'].format(id=user_id, user=username, name=full_name)
         for adm in ADMIN_IDS:
-            try:
-                await bot.send_message(adm, alert)
-            except Exception as e:
-                logging.warning(f"Adminga xabar yuborilmadi: {e}")
+            try: await bot.send_message(adm, alert)
+            except: pass
     
-    # Menyu tanlash
     if user_id in ADMIN_IDS:
         await message.answer(TEXTS['uz']['welcome_admin'], reply_markup=get_admin_kb())
     else:
@@ -177,7 +163,6 @@ async def cmd_start(message: Message, state: FSMContext):
 async def admin_stats(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
     
-    # Asinxron so'rovlar
     res_count = await db_execute("SELECT COUNT(*) FROM resumes", fetchone=True)
     usr_count = await db_execute("SELECT COUNT(*) FROM users", fetchone=True)
     
@@ -268,37 +253,32 @@ async def s4(message: Message, state: FSMContext):
     await state.update_data(gender=message.text); await state.set_state(ResumeFSM.address)
     await message.answer(TEXTS['uz']['ask_address'], reply_markup=get_user_kb(in_process=True))
 
+# MANZILDAN KEYIN TO'G'RIDAN-TO'G'RI TELEFON RAQAMGA O'TAMIZ
 @dp.message(ResumeFSM.address)
 async def s5(message: Message, state: FSMContext):
-    await state.update_data(address=message.text); await state.set_state(ResumeFSM.location)
-    
-    builder = ReplyKeyboardBuilder()
-    builder.add(KeyboardButton(text="📍 Lokatsiya", request_location=True))
-    builder.row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit']))
-    await message.answer(TEXTS['uz']['ask_location'], reply_markup=builder.as_markup(resize_keyboard=True))
-
-@dp.message(ResumeFSM.location, F.location)
-async def s6(message: Message, state: FSMContext):
-    await state.update_data(lat=message.location.latitude, lon=message.location.longitude); await state.set_state(ResumeFSM.phone_number)
+    await state.update_data(address=message.text)
+    # Lokatsiya bosqichi tashlab ketildi
+    await state.set_state(ResumeFSM.phone_number)
     
     builder = ReplyKeyboardBuilder()
     builder.add(KeyboardButton(text="📞 Kontaktni yuborish", request_contact=True))
     builder.row(KeyboardButton(text=TEXTS['uz']['btn_start']), KeyboardButton(text=TEXTS['uz']['btn_quit']))
     await message.answer(TEXTS['uz']['ask_phone'], reply_markup=builder.as_markup(resize_keyboard=True))
 
+# 6-bosqich: TELEFON RAQAM (Lokatsiya yo'q)
 @dp.message(ResumeFSM.phone_number, F.contact | F.text)
-async def s7(message: Message, state: FSMContext):
+async def s6(message: Message, state: FSMContext):
     phone = message.contact.phone_number if message.contact else message.text
     await state.update_data(phone=phone); await state.set_state(ResumeFSM.previous_job)
     await message.answer(TEXTS['uz']['ask_prev_job'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.previous_job)
-async def s8(message: Message, state: FSMContext):
+async def s7(message: Message, state: FSMContext):
     await state.update_data(prev_job=message.text); await state.set_state(ResumeFSM.experience)
     await message.answer(TEXTS['uz']['ask_exp'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.experience)
-async def s9(message: Message, state: FSMContext):
+async def s8(message: Message, state: FSMContext):
     await state.update_data(exp=message.text); await state.set_state(ResumeFSM.position)
     
     vacs = await db_execute("SELECT title FROM vacancies", fetchall=True)
@@ -312,32 +292,32 @@ async def s9(message: Message, state: FSMContext):
     await message.answer(TEXTS['uz']['ask_position'], reply_markup=builder.as_markup(resize_keyboard=True))
 
 @dp.message(ResumeFSM.position)
-async def s10(message: Message, state: FSMContext):
+async def s9(message: Message, state: FSMContext):
     await state.update_data(pos=message.text); await state.set_state(ResumeFSM.photo)
     await message.answer(TEXTS['uz']['ask_photo'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.photo, F.photo)
-async def s11(message: Message, state: FSMContext):
+async def s10(message: Message, state: FSMContext):
     await state.update_data(photo=message.photo[-1].file_id); await state.set_state(ResumeFSM.hobby)
     await message.answer(TEXTS['uz']['ask_hobby'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.hobby)
-async def s12(message: Message, state: FSMContext):
+async def s11(message: Message, state: FSMContext):
     await state.update_data(hobby=message.text); await state.set_state(ResumeFSM.skills)
     await message.answer(TEXTS['uz']['ask_skills'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.skills)
-async def s13(message: Message, state: FSMContext):
+async def s12(message: Message, state: FSMContext):
     await state.update_data(skills=message.text); await state.set_state(ResumeFSM.purpose)
     await message.answer(TEXTS['uz']['ask_purpose'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.purpose)
-async def s14(message: Message, state: FSMContext):
+async def s13(message: Message, state: FSMContext):
     await state.update_data(purpose=message.text); await state.set_state(ResumeFSM.guarantor)
     await message.answer(TEXTS['uz']['ask_guarantor'], reply_markup=get_user_kb(in_process=True))
 
 @dp.message(ResumeFSM.guarantor)
-async def s15(message: Message, state: FSMContext):
+async def s14(message: Message, state: FSMContext):
     await state.update_data(guarantor=message.text)
     data = await state.get_data()
     cap = f"📄 <b>TASDIQLASH</b>\n\n👤 {data['full_name']}\n📞 {data['phone']}\n💼 {data['pos']}"
@@ -349,21 +329,19 @@ async def s15(message: Message, state: FSMContext):
 async def process_confirm(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     
-    # Ball hisoblash
     score = 50 
     if any(w in str(data.get('skills', '')).lower() for w in ["rus", "excel"]): score += 20
     now = datetime.now().strftime("%H:%M | %d.%m.%Y")
     
-    # Bazaga yozish (Async)
+    # Bazaga yozish (Lat va Lon endi 0 bo'lib ketadi)
     await db_execute("""INSERT INTO resumes 
              (user_id, full_name, birth_date, age, gender, address, latitude, longitude,
               phone_number, previous_job, experience, position, photo_id, hobby, skills, purpose, guarantor, score)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
              (call.from_user.id, data['full_name'], data['birth_date'], data['age'], data['gender'], data['address'],
-              data.get('lat', 0), data.get('lon', 0), data['phone'], data['prev_job'], data['exp'], 
+              0, 0, data['phone'], data['prev_job'], data['exp'], # 0, 0 = Geo yo'q
               data['pos'], data['photo'], data['hobby'], data['skills'], data['purpose'], data['guarantor'], score), commit=True)
 
-    # Adminlarni xabardor qilish
     msg = TEXTS['uz']['new_resume_admin'].format(name=data['full_name'], phone=data['phone'], pos=data['pos'], score=score, time=now)
 
     for adm in ADMIN_IDS:
