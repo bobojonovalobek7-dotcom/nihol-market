@@ -34,12 +34,14 @@ TEXTS = {
         'btn_cancel': "❌ Bekor qilish",
         'btn_view': "📂 Rezyumelar (20)",
         'btn_stats': "📊 Statistika",
-        'q1':"1. F.I.O:", 'q2':"2. Tug'ilgan sana:", 'q3':"3. Yosh:", 'q4':"4. Jins:",
+        'q1':"1. F.I.O kiriting:", 'q2':"2. Tug'ilgan sana:", 'q3':"3. Yosh:", 'q4':"4. Jins:",
         'q5':"5. Oilaviy holat:", 'q6':"6. Manzil:", 'q7':"7. Telefon:", 'q8':"8. Oldingi ish joy:",
         'q9':"9. Tajriba:", 'q10':"10. Lavozim:", 'q11':"11. Rasm:", 'q12':"12. Qiziqishlar:",
         'q13':"13. Bilimlar:", 'q14':"14. Maqsad:", 'q15':"15. Kafil:",
         'done': "✅ Qabul qilindi!", 'cancel': "⚠️ Bekor qilindi.",
         'err_txt': "⚠️ Matn yozing!", 'err_num': "⚠️ Raqam kiriting!",
+        
+        # ADMIN UCHUN SHABLON
         'admin_tpl': (
             "🔔 <b>YANGI REZYUME!</b>\n"
             "➖➖➖➖➖➖➖➖➖➖\n"
@@ -63,7 +65,7 @@ TEXTS = {
     }
 }
 
-# ================= 3. BAZA (ASINXRON) =================
+# ================= 3. DATABASE (ASINXRON) =================
 async def db_exec(query, params=(), fetchone=False, fetchall=False, commit=False):
     def _run():
         try:
@@ -85,7 +87,8 @@ async def setup_db():
     for admin_id in ADMIN_IDS:
         await db_exec("INSERT OR IGNORE INTO admins (user_id) VALUES (?)", (admin_id,), commit=True)
 
-    await db_exec("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT)", commit=True)
+    await db_exec("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)", commit=True)
+    
     await db_exec("""CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, birth TEXT, age INTEGER, gender TEXT, family TEXT,
         address TEXT, phone TEXT, prev TEXT, exp TEXT, pos TEXT, photo TEXT, hobby TEXT,
@@ -111,11 +114,23 @@ def kb_admin():
     b.row(KeyboardButton(text=TEXTS['uz']['btn_restart']))
     return b.as_markup(resize_keyboard=True)
 
-# ================= 5. STATES =================
+# ================= 5. STATES (TO'LIQ) =================
 class Form(StatesGroup):
-    name=State(); birth=State(); age=State(); gender=State(); family=State(); address=State(); phone=State();
-    prev=State(); exp=State(); pos=State(); photo=State(); hobby=State(); skills=State();
-    purpose=State(); guarantor=State()
+    name = State()
+    birth = State()
+    age = State()
+    gender = State()
+    family = State()
+    address = State()
+    phone = State()
+    prev = State()
+    exp = State()
+    pos = State()
+    photo = State()
+    hobby = State()
+    skills = State()
+    purpose = State()
+    guarantor = State()
 
 # ================= 6. LOGIKA =================
 dp = Dispatcher(storage=MemoryStorage())
@@ -126,15 +141,33 @@ bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 async def start(m: Message, state: FSMContext):
     await state.clear()
     uid = m.from_user.id
-    await db_exec("INSERT OR IGNORE INTO users (user_id, username) VALUES (?,?)", (uid, m.from_user.username), commit=True)
+    await db_exec("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (uid,), commit=True)
+    
     kb = kb_admin() if uid in ADMIN_IDS else kb_user()
     txt = TEXTS['uz']['welcome_admin'] if uid in ADMIN_IDS else TEXTS['uz']['welcome']
     await m.answer(txt, reply_markup=kb)
 
-# ... (ADMIN PANEL, O'ZGARMAGAN)
+# --- ADMIN PANEL ---
+@dp.message(F.text == TEXTS['uz']['btn_stats'])
+async def stats(m: Message):
+    if m.from_user.id not in ADMIN_IDS: return
+    rc = (await db_exec("SELECT COUNT(*) FROM resumes", fetchone=True))[0]
+    uc = (await db_exec("SELECT COUNT(*) FROM users", fetchone=True))[0]
+    await m.answer(f"📊 <b>Statistika:</b>\n👥 Userlar: {uc}\n📄 Rezyumelar: {rc}")
+
+@dp.message(F.text == TEXTS['uz']['btn_view'])
+async def view_resumes(m: Message):
+    if m.from_user.id not in ADMIN_IDS: return
+    res = await db_exec("SELECT id, name, pos FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
+    if not res: return await m.answer("📭 Bo'sh")
+    
+    kb = ReplyKeyboardBuilder()
+    for r in res: kb.add(KeyboardButton(text=f"{r[1]} | {r[2]}"))
+    kb.adjust(1)
+    await m.answer("📂 So'nggi 20 ta:", reply_markup=kb.as_markup(resize_keyboard=True))
 
 # --- REZYUME TO'LDIRISH ---
-@dp.message(F.text == TEXTS['uz']['btn_quit'])
+@dp.message(F.text == TEXTS['uz']['btn_cancel'])
 async def quit_proc(m: Message, state: FSMContext):
     await state.clear()
     kb = kb_admin() if m.from_user.id in ADMIN_IDS else kb_user()
@@ -160,11 +193,9 @@ async def p_gender(m:Message,s:FSMContext): await s.update_data(gender=m.text); 
 async def p_family(m:Message,s:FSMContext): await s.update_data(family=m.text); await s.set_state(Form.address); await m.answer(TEXTS['uz']['q6'])
 @dp.message(Form.address)
 async def p_addr(m:Message,s:FSMContext): await s.update_data(address=m.text); await s.set_state(Form.phone)
-    # --- INDENTATION ERROR SHU YERDA EDI (TUZATILDI) ---
     kb=ReplyKeyboardBuilder().add(KeyboardButton(text="📞 Kontaktni yuborish",request_contact=True))
     kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q7'],reply_markup=kb.as_markup(resize_keyboard=True))
-
 @dp.message(Form.phone, F.contact | F.text)
 async def p_phone(m:Message,s:FSMContext): await s.update_data(phone=m.contact.phone_number if m.contact else m.text); await s.set_state(Form.prev); await m.answer(TEXTS['uz']['q8'], reply_markup=kb_user(True))
 @dp.message(Form.prev)
