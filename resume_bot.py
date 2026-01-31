@@ -24,60 +24,58 @@ DB_FILE = "resume_bot_final.db"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(message)s")
 
-# ================= TEXTS (MATNLAR - RASMDAGI DIZAYN) =================
+# ================= TEXTS (MATNLAR) =================
 TEXTS = {
     'uz': {
         'welcome_user': "👋 <b>Assalomu alaykum!</b>\nIshga kirish uchun anketani to'ldirishni boshlang.",
-        'welcome_admin': "👑 <b>Admin Panelga xush kelibsiz!</b>\nBoshqaruv menyusi:",
+        'welcome_admin': "👑 <b>Admin Panelga xush kelibsiz!</b>",
         'btn_fill': "📄 Rezyume to'ldirish",
         'btn_restart': "🔄 Qayta ishga tushirish",
         'btn_start': "🚀 Boshlash",
         'btn_quit': "❌ Bekor qilish",
-        
-        # Admin tugmalari
-        'btn_view': "📂 Rezyumelar",
-        'btn_stats': "📊 Statistika",
         
         # Savollar
         'ask_name': "1. <b>F.I.O</b> to'liq kiriting:\n<i>Masalan: Bobojonov Alobek</i>",
         'ask_birth': "2. <b>Tug'ilgan sanangiz</b> (kun.oy.yil):\n<i>Masalan: 25.10.1998</i>",
         'ask_age': "3. <b>Yoshingiz</b> (faqat raqamda):\n<i>Masalan: 26</i>",
         'ask_gender': "4. <b>Jinsingizni tanlang:</b>",
-        'ask_family': "5. <b>Oilaviy holatingiz haqida ma'lumot:</b>\n<i>Masalan: Turmushga chiqqan, Ajrashgan, Bo'ydoq</i>",
-        'ask_address': "6. <b>Manzilingizni kiriting:</b>\n<i>Masalan: Urganch shahri, Al-Xorazmiy ko'chasi 12-uy</i>",
+        'ask_family': "5. <b>Oilaviy holatingiz:</b>\n<i>Masalan: Turmushga chiqqan, Bo'ydoq</i>",
+        'ask_address': "6. <b>Manzilingizni kiriting:</b>\n<i>Masalan: Urganch shahri, Al-Xorazmiy 12</i>",
         'ask_phone': "7. <b>📞 Telefon raqamingizni yuboring:</b>",
         'ask_prev_job': "8. <b>Oldingi ish joyingiz:</b>\n<i>Masalan: 'Nihol' marketi yoki 'Yo'q'</i>",
-        'ask_exp': "9. <b>Ish tajribangiz:</b>\n<i>Masalan: 2 yil sotuvchi bo'lib ishlaganman</i>",
+        'ask_exp': "9. <b>Ish tajribangiz:</b>\n<i>Masalan: 2 yil sotuvchi</i>",
         'ask_position': "10. <b>Qaysi lavozimda ishlamoqchisiz?</b>",
         'ask_photo': "11. <b>🖼 Rasm (3x4) yuboring:</b>",
-        'ask_interests': "12. <b>Shaxsiy qiziqishlaringiz:</b>\n<i>Masalan: Kitob o'qish, Sport, Musiqa</i>",
-        'ask_skills': "13. <b>Bilimlaringiz (Til, Kompyuter):</b>\n<i>Masalan: Rus tili (a'lo), Excel</i>",
-        'ask_purpose': "14. <b>Ishdan maqsad:</b>\n<i>Masalan: Jamoaga foyda keltirish va rivojlanish</i>",
-        'ask_guarantor': "15. <b>Sizga kafil bo'la oladigan odam bormi?</b>\nU haqida ma'lumot (Ismi, Telefoni):\n<i>Masalan: Akam Alimov Vali, +998901234567</i>",
+        'ask_interests': "12. <b>Shaxsiy qiziqishlaringiz:</b>\n<i>Masalan: Sport, Kitob</i>",
+        'ask_skills': "13. <b>Bilimlaringiz (Til, Kompyuter):</b>\n<i>Masalan: Rus tili, Excel</i>",
+        'ask_purpose': "14. <b>Ishdan maqsad:</b>\n<i>Masalan: Rivojlanish va daromad</i>",
+        'ask_guarantor': "15. <b>Kafil (Ismi, Telefoni):</b>\n<i>Masalan: Akam Vali, +998901234567</i>",
         
         'resume_accepted': "✅ <b>Qabul qilindi!</b>\nAdminlarimiz tez orada siz bilan bog'lanishadi.",
         'resume_cancelled': "⚠️ <b>Amaliyot bekor qilindi.</b>",
         'err_type': "⚠️ <b>Iltimos, matn ko'rinishida yozing!</b>",
-        'err_age': "⚠️ <b>Xato!</b> Iltimos, yoshingizni faqat raqamda kiriting (Masalan: 25):",
-        'new_user_alert': "👤 <b>Yangi User:</b> {name}", # Start bosganda adminjim turadi
+        'err_age': "⚠️ <b>Xato!</b> Faqat raqam kiriting (Masalan: 25):",
         
-        # --- RASMDAGI DIZAYNGA MOSLASHTIRILDI ---
-        # {link_name} -> Ismni bossa chatga o'tadi
-        'resume_caption_template': (
+        # --- ADMIN UCHUN TO'LIQ FORMAT (RASMDAGIDEK) ---
+        'admin_full_notification': (
+            "🔔 <b>YANGI REZYUME QABUL QILINDI!</b>\n"
+            "➖➖➖➖➖➖➖➖➖➖\n"
             "👤 <b>{link_name}</b>\n"
             "📅 <b>Yosh:</b> {age}\n"
             "🚻 <b>Jins:</b> {gender}\n"
             "💍 <b>Oila:</b> {family}\n"
             "📞 <b>Tel:</b> {phone}\n"
             "📍 <b>Manzil:</b> {address}\n"
-            "━━━━━━━━━━━━\n"
+            "➖➖➖➖➖➖➖➖➖➖\n"
             "💼 <b>Lavozim:</b> {pos}\n"
             "📝 <b>Tajriba:</b> {exp}\n"
             "🏢 <b>Eski ish:</b> {prev_job}\n"
             "⚽ <b>Qiziqishlar:</b> {hobby}\n"
             "💻 <b>Bilimlar:</b> {skills}\n"
+            "🎯 <b>Maqsad:</b> {purpose}\n"
             "🤝 <b>Kafil:</b> {guarantor}\n"
-            "📊 <b>Ball:</b> {score}"
+            "📊 <b>Ball:</b> {score}\n"
+            "🕒 <b>Topshirildi:</b> {time}"
         )
     }
 }
@@ -107,7 +105,6 @@ async def setup_database():
 
     await db_execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, full_name TEXT)", commit=True)
     
-    # Baza tuzilishi o'zgarmaydi, xavotir olmang
     await db_execute("""CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, full_name TEXT, birth_date TEXT, 
         age INTEGER, gender TEXT, family_status TEXT, address TEXT, phone_number TEXT, previous_job TEXT, 
@@ -116,7 +113,7 @@ async def setup_database():
 
     await db_execute("CREATE TABLE IF NOT EXISTS vacancies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT)", commit=True)
     
-    # Vakansiyalarni tekshirish
+    # Vakansiyalar
     existing_vacs = await db_execute("SELECT count(*) FROM vacancies", fetchone=True)
     if existing_vacs and existing_vacs[0] == 0:
         default_vacancies = ["Kassir", "Sotuvchi", "Gruzchik", "Oshpaz", "Bugalter yordamchisi", "SMM", "Tozalovchi"]
@@ -166,11 +163,9 @@ async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
     
-    # Bazaga qo'shamiz, lekin adminga xabar YUBORMAYMIZ
-    user_exist = await db_execute("SELECT user_id FROM users WHERE user_id = ?", (user_id,), fetchone=True)
-    if not user_exist:
-        await db_execute("INSERT INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
-                         (user_id, message.from_user.username, message.from_user.first_name), commit=True)
+    # Bazaga yozamiz (Adminga xabar BORMAYDI)
+    await db_execute("INSERT OR IGNORE INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
+                     (user_id, message.from_user.username, message.from_user.first_name), commit=True)
     
     if user_id in ADMIN_IDS:
         await message.answer(TEXTS['uz']['welcome_admin'], reply_markup=get_admin_kb())
@@ -188,7 +183,6 @@ async def admin_stats(message: Message):
 @dp.message(F.text == "📂 Rezyumelar")
 async def admin_view_resumes(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
-    # 20 ta odamni chiqarish
     resumes = await db_execute("SELECT id, full_name, position FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
     if not resumes: return await message.answer("📭 Bo'sh")
     
@@ -198,33 +192,22 @@ async def admin_view_resumes(message: Message):
     kb.adjust(1)
     await message.answer("📂 So'nggi 20 ta rezyume:", reply_markup=kb.as_markup())
 
-# --- ADMIN BATAFSIL (ESKI REZYUMELARNI KO'RGANDA HAM CHAT TUGMASI CHIQADI) ---
 @dp.callback_query(F.data.startswith("view_"))
 async def view_detail(call: CallbackQuery):
     rid = call.data.split("_")[1]
     d = await db_execute("SELECT * FROM resumes WHERE id = ?", (rid,), fetchone=True)
     if d:
-        # User ID bazadan olinadi (d[1])
-        candidate_user_id = d[1] 
-        
-        # Linkli ism yasaymiz
-        link_name = f"<a href='tg://user?id={candidate_user_id}'>{d[2]}</a>"
-        
-        cap = TEXTS['uz']['resume_caption_template'].format(
+        link_name = f"<a href='tg://user?id={d[1]}'>{d[2]}</a>"
+        cap = TEXTS['uz']['admin_full_notification'].format(
             link_name=link_name, age=d[4], gender=d[5], family=d[6], address=d[7], phone=d[8],
-            prev_job=d[9], exp=d[10], pos=d[11], hobby=d[13], skills=d[14], guarantor=d[16], score=d[17]
+            prev_job=d[9], exp=d[10], pos=d[11], hobby=d[13], skills=d[14], purpose=d[15], guarantor=d[16], score=d[17], time=d[18]
         )
-        
-        # Chatga o'tish tugmasi
-        chat_btn = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={candidate_user_id}")]
-        ])
-        
+        chat_btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={d[1]}")]])
         try: await call.message.answer_photo(d[12], caption=cap, reply_markup=chat_btn)
         except: await call.message.answer(cap, reply_markup=chat_btn)
     await call.answer()
 
-# --- REZYUME TO'LDIRISH (1-15 BOSQICHLAR) ---
+# --- REZYUME TO'LDIRISH ---
 @dp.message(F.text == TEXTS['uz']['btn_quit'])
 async def quit_h(message: Message, state: FSMContext):
     await state.clear()
@@ -350,15 +333,12 @@ async def s14(message: Message, state: FSMContext):
     if not await validate_text(message): return
     await state.update_data(guarantor=message.text)
     d = await state.get_data()
-    
-    # Foydalanuvchining o'ziga tasdiqlash uchun ko'rsatish (Bu yerda link shart emas)
-    cap = (f"📄 <b>TASDIQLASH</b>\n\n👤 {d['full_name']}\n📞 {d['phone']}\n"
-           f"💼 {d['pos']}\n💍 {d['family_status']}")
-    
+    # Nomzodning o'ziga qisqa ko'rsatamiz
+    cap = f"📄 <b>TASDIQLASH</b>\n\n👤 {d['full_name']}\n📞 {d['phone']}\n💼 {d['pos']}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ TASDIQLASH", callback_data="conf_final")]])
     await message.answer_photo(d['photo'], caption=cap, reply_markup=kb)
 
-# --- FINAL CONFIRMATION (ADMIN XABARI SHU YERDA) ---
+# --- FINAL (ADMIN GA TO'LIQ FORMATDA BORADI) ---
 @dp.callback_query(F.data == "conf_final")
 async def confirm(call: CallbackQuery, state: FSMContext):
     d = await state.get_data()
@@ -366,6 +346,7 @@ async def confirm(call: CallbackQuery, state: FSMContext):
     
     score = 50
     if any(x in str(d.get('skills', '')).lower() for x in ['rus', 'excel']): score += 20
+    now = datetime.now().strftime("%H:%M | %d.%m.%Y")
     
     await db_execute("""INSERT INTO resumes (
         user_id, full_name, birth_date, age, gender, family_status, address, phone_number, previous_job, experience, 
@@ -375,28 +356,28 @@ async def confirm(call: CallbackQuery, state: FSMContext):
          d['phone'], d['prev_job'], d['exp'], d['pos'], d['photo'], d['interests'], d['skills'], 
          d['purpose'], d['guarantor'], score), commit=True)
     
-    # --- ADMIN UCHUN XABAR YASASH (RASMDAGIDEK) ---
+    # --- ADMIN UCHUN MAXSUS XABAR (To'liq ochilgan va silka bilan) ---
     
-    # 1. Ismga silka (Link) berish: tg://user?id=12345
+    # Ismga silka qo'yamiz (tg://user?id=123...)
     link_name = f"<a href='tg://user?id={user_id}'>{d['full_name']}</a>"
     
-    # 2. To'liq caption yasash
-    admin_caption = TEXTS['uz']['resume_caption_template'].format(
-        link_name=link_name, # Linkli ism
+    # Katta formatdagi tekst
+    admin_caption = TEXTS['uz']['admin_full_notification'].format(
+        link_name=link_name, # Link
         age=d['age'], gender=d['gender'], family=d['family_status'], phone=d['phone'], address=d['address'],
         pos=d['pos'], exp=d['exp'], prev_job=d['prev_job'], hobby=d['interests'], skills=d['skills'],
-        guarantor=d['guarantor'], score=score
+        purpose=d['purpose'], guarantor=d['guarantor'], score=score, time=now
     )
     
-    # 3. "Nomzodga yozish" tugmasi
+    # "Nomzodga yozish" tugmasi
     chat_btn = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={user_id}")]
     ])
 
+    # Adminlarga yuborish
     for adm in ADMIN_IDS:
         try:
             await bot.send_sticker(adm, "CAACAgIAAxkBAAEL7Rxl_U6XnS7fS_R9S_R9S_R9")
-            # Rasm, Caption va Tugma bilan yuborish
             await bot.send_photo(adm, d['photo'], caption=admin_caption, reply_markup=chat_btn)
         except Exception as e:
             logging.error(f"Failed to send to admin {adm}: {e}")
@@ -412,7 +393,4 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot to'xtatildi")
+    asyncio.run(main())
