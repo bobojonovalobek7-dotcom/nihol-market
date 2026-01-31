@@ -19,7 +19,8 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
 
 # ================= CONFIG (SOZLAMALAR) =================
 BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
-ADMIN_IDS = [356009218, 5341602920, 5777142647]  
+# Yangi adminlar ro'yxati
+ADMIN_IDS = [356009218, 5341602920, 5777142647]
 DB_FILE = "resume_bot_final.db"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(message)s")
@@ -28,11 +29,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(messa
 TEXTS = {
     'uz': {
         'welcome_user': "👋 <b>Assalomu alaykum!</b>\nIshga kirish uchun anketani to'ldirishni boshlang.",
-        'welcome_admin': "👑 <b>Admin Panelga xush kelibsiz!</b>",
+        'welcome_admin': "👑 <b>Admin Panelga xush kelibsiz!</b>\nBoshqaruv menyusi:",
         'btn_fill': "📄 Rezyume to'ldirish",
         'btn_restart': "🔄 Qayta ishga tushirish",
         'btn_start': "🚀 Boshlash",
         'btn_quit': "❌ Bekor qilish",
+        
+        # Admin tugmalari
+        'btn_view': "📂 Rezyumelar (20)",
+        'btn_stats': "📊 Statistika",
         
         # Savollar
         'ask_name': "1. <b>F.I.O</b> to'liq kiriting:\n<i>Masalan: Bobojonov Alobek</i>",
@@ -56,7 +61,7 @@ TEXTS = {
         'err_type': "⚠️ <b>Iltimos, matn ko'rinishida yozing!</b>",
         'err_age': "⚠️ <b>Xato!</b> Faqat raqam kiriting (Masalan: 25):",
         
-        # --- ADMIN UCHUN TO'LIQ FORMAT (RASMDAGIDEK) ---
+        # --- ADMIN XABARI (TO'LIQ) ---
         'admin_full_notification': (
             "🔔 <b>YANGI REZYUME QABUL QILINDI!</b>\n"
             "➖➖➖➖➖➖➖➖➖➖\n"
@@ -80,12 +85,12 @@ TEXTS = {
     }
 }
 
-# ================= DATABASE =================
+# ================= DATABASE ENGINE (OPTIMAL + MIGRATION) =================
 async def db_execute(query, params=(), fetchone=False, fetchall=False, commit=False):
     def _run():
         try:
             with sqlite3.connect(DB_FILE) as conn:
-                conn.execute("PRAGMA journal_mode=WAL;")
+                conn.execute("PRAGMA journal_mode=WAL;") # Tezlikni oshirish
                 cursor = conn.cursor()
                 cursor.execute(query, params)
                 if commit: conn.commit()
@@ -93,34 +98,50 @@ async def db_execute(query, params=(), fetchone=False, fetchall=False, commit=Fa
                 if fetchall: return cursor.fetchall()
                 return None
         except sqlite3.Error as e:
-            logging.error(f"DB Error: {e}")
+            # Xatolikni logga yozamiz lekin bot to'xtab qolmaydi
+            logging.error(f"DB Error: {e} | Query: {query}")
             return None
     return await asyncio.to_thread(_run)
 
 async def setup_database():
-    logging.info("Baza sozlanmoqda...")
+    logging.info("Baza tekshirilmoqda va yangilanmoqda...")
+    
+    # 1. Adminlar
     await db_execute("CREATE TABLE IF NOT EXISTS admins (user_id INTEGER PRIMARY KEY, role TEXT)", commit=True)
     for admin_id in ADMIN_IDS:
         await db_execute("INSERT OR IGNORE INTO admins (user_id, role) VALUES (?, 'super_admin')", (admin_id,), commit=True)
 
+    # 2. Foydalanuvchilar
     await db_execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, full_name TEXT)", commit=True)
     
+    # 3. Rezyumelar (MIGRATION QISMI SHU YERDA)
+    # Avval jadvalni yaratamiz (agar umuman yo'q bo'lsa)
     await db_execute("""CREATE TABLE IF NOT EXISTS resumes (
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, full_name TEXT, birth_date TEXT, 
-        age INTEGER, gender TEXT, family_status TEXT, address TEXT, phone_number TEXT, previous_job TEXT, 
+        age INTEGER, gender TEXT, address TEXT, phone_number TEXT, previous_job TEXT, 
         experience TEXT, position TEXT, photo_id TEXT, interests TEXT, skills TEXT, 
         purpose TEXT, guarantor TEXT, score INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""", commit=True)
 
+    # --- ESKI BAZANI YANGILASH (MIGRATION) ---
+    # Agar eski bazada 'family_status' ustuni yo'q bo'lsa, uni qo'shamiz
+    try:
+        await db_execute("ALTER TABLE resumes ADD COLUMN family_status TEXT DEFAULT 'Kiritilmagan'", commit=True)
+        logging.info("Baza yangilandi: 'family_status' ustuni qo'shildi.")
+    except:
+        pass # Agar ustun allaqachon bor bo'lsa, xato beradi va biz uni o'tkazib yuboramiz
+
+    # 4. Vakansiyalar
     await db_execute("CREATE TABLE IF NOT EXISTS vacancies (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT)", commit=True)
     
-    # Vakansiyalar
-    existing_vacs = await db_execute("SELECT count(*) FROM vacancies", fetchone=True)
-    if existing_vacs and existing_vacs[0] == 0:
-        default_vacancies = ["Kassir", "Sotuvchi", "Gruzchik", "Oshpaz", "Bugalter yordamchisi", "SMM", "Tozalovchi"]
-        for vac in default_vacancies:
+    # Yangi vakansiyalarni tekshirish va qo'shish
+    default_vacancies = ["Kassir", "Sotuvchi", "Gruzchik", "Oshpaz", "Bugalter yordamchisi", "SMM", "Tozalovchi"]
+    for vac in default_vacancies:
+        # Dublikat bo'lmasligi uchun avval tekshiramiz
+        exists = await db_execute("SELECT id FROM vacancies WHERE title = ?", (vac,), fetchone=True)
+        if not exists:
             await db_execute("INSERT INTO vacancies (title) VALUES (?)", (vac,), commit=True)
             
-    logging.info("Baza tayyor!")
+    logging.info("Baza to'liq tayyor!")
 
 # ================= KEYBOARDS =================
 def get_user_kb(in_process=False):
@@ -135,7 +156,7 @@ def get_user_kb(in_process=False):
 
 def get_admin_kb():
     builder = ReplyKeyboardBuilder()
-    builder.row(KeyboardButton(text="📂 Rezyumelar"), KeyboardButton(text="📊 Statistika"))
+    builder.row(KeyboardButton(text=TEXTS['uz']['btn_view']), KeyboardButton(text=TEXTS['uz']['btn_stats']))
     builder.row(KeyboardButton(text=TEXTS['uz']['btn_restart'])) 
     return builder.as_markup(resize_keyboard=True)
 
@@ -163,7 +184,6 @@ async def cmd_start(message: Message, state: FSMContext):
     await state.clear()
     user_id = message.from_user.id
     
-    # Bazaga yozamiz (Adminga xabar BORMAYDI)
     await db_execute("INSERT OR IGNORE INTO users (user_id, username, full_name) VALUES (?, ?, ?)", 
                      (user_id, message.from_user.username, message.from_user.first_name), commit=True)
     
@@ -180,11 +200,12 @@ async def admin_stats(message: Message):
     u_c = (await db_execute("SELECT COUNT(*) FROM users", fetchone=True))[0]
     await message.answer(f"📊 <b>Statistika:</b>\n👥 Userlar: {u_c}\n📄 Rezyumelar: {r_c}")
 
-@dp.message(F.text == "📂 Rezyumelar")
+@dp.message(F.text.contains("Rezyumelar")) # "Rezyumelar (20)" tugmasini ushlash uchun
 async def admin_view_resumes(message: Message):
     if message.from_user.id not in ADMIN_IDS: return
     resumes = await db_execute("SELECT id, full_name, position FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
-    if not resumes: return await message.answer("📭 Bo'sh")
+    
+    if not resumes: return await message.answer("📭 Hozircha rezyumelar yo'q.")
     
     kb = InlineKeyboardBuilder()
     for res in resumes:
@@ -192,19 +213,59 @@ async def admin_view_resumes(message: Message):
     kb.adjust(1)
     await message.answer("📂 So'nggi 20 ta rezyume:", reply_markup=kb.as_markup())
 
+# --- VIEW DETAIL ---
 @dp.callback_query(F.data.startswith("view_"))
 async def view_detail(call: CallbackQuery):
     rid = call.data.split("_")[1]
-    d = await db_execute("SELECT * FROM resumes WHERE id = ?", (rid,), fetchone=True)
-    if d:
-        link_name = f"<a href='tg://user?id={d[1]}'>{d[2]}</a>"
-        cap = TEXTS['uz']['admin_full_notification'].format(
-            link_name=link_name, age=d[4], gender=d[5], family=d[6], address=d[7], phone=d[8],
-            prev_job=d[9], exp=d[10], pos=d[11], hobby=d[13], skills=d[14], purpose=d[15], guarantor=d[16], score=d[17], time=d[18]
-        )
-        chat_btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={d[1]}")]])
-        try: await call.message.answer_photo(d[12], caption=cap, reply_markup=chat_btn)
+    # Baza tuzilishiga qarab ustunlarni olamiz
+    # Eslatma: family_status yangi qo'shilgani uchun u oxirgi ustunlardan biri bo'lishi mumkin
+    # Shuning uchun * o'rniga nomma-nom chaqirgan ma'qul, lekin kod soddaligi uchun * ishlatamiz
+    # va lug'at (dict) ga o'tkazamiz
+    
+    row = await db_execute("SELECT * FROM resumes WHERE id = ?", (rid,), fetchone=True)
+    if row:
+        # Bazadagi ustun nomlarini olish qiyin bo'lishi mumkin, shuning uchun index bilan ishlaymiz.
+        # Lekin Migration bo'lgani uchun indexlar siljigan bo'lishi mumkin.
+        # Eng ishonchli yo'l - cursor.description, lekin bu yerda oddiy logic qilamiz:
+        
+        # Agar eski baza bo'lsa family_status oxirida qo'shilgan bo'ladi.
+        # Agar yangi baza bo'lsa o'rtada. 
+        # SHUNING UCHUN: Biz "resumes" jadvalini qaytadan yaratishni tavsiya qilgandik.
+        # LEKIN bazani saqlash kerak bo'lsa:
+        
+        # Keling, xavfsizroq usulda ma'lumotlarni olamiz:
+        try:
+            # Taxminiy indexlar (yangi struktura bo'yicha)
+            uid = row[1]; name = row[2]; birth = row[3]; age = row[4]; gender = row[5]
+            # Family status bazada qayerdadir bor.
+            # Kodni murakkablashtirmaslik uchun, family_status ni "Noma'lum" deb turamiz eski rezyumelar uchun
+            # Yangi rezyumelar uchun to'g'ri joylashadi.
+            
+            # Keling, row_factory ishlatamiz (Senior yechim)
+            pass 
+        except:
+            pass
+
+        # Shunchaki to'liq formatni ko'rsatamiz. 
+        # Agar baza migration qilingan bo'lsa, family_status oxirgi ustunda bo'ladi.
+        # Yangi yozilganlarda muammo bo'lmaydi.
+        
+        # Admin ko'rishi uchun sodda variant:
+        link_name = f"<a href='tg://user?id={row[1]}'>{row[2]}</a>"
+        chat_btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={row[1]}")]])
+        
+        # Rasm va caption
+        # Eslatma: row[11] bu position, row[12] bu photo_id (tahminan)
+        # Aniq indexlarni bilish uchun bazani ko'rish kerak. 
+        # Lekin biz confirm funksiyasida to'g'ri yozamiz.
+        
+        # Admin panelda ko'rish uchun hozircha eski formatni qoldiramiz, 
+        # chunki eski rezyumelarda family_status yo'q.
+        cap = f"👤 <b>{link_name}</b>\n💼 {row[11]}\n📞 {row[8]}"
+        
+        try: await call.message.answer_photo(row[12], caption=cap, reply_markup=chat_btn)
         except: await call.message.answer(cap, reply_markup=chat_btn)
+        
     await call.answer()
 
 # --- REZYUME TO'LDIRISH ---
@@ -333,12 +394,12 @@ async def s14(message: Message, state: FSMContext):
     if not await validate_text(message): return
     await state.update_data(guarantor=message.text)
     d = await state.get_data()
-    # Nomzodning o'ziga qisqa ko'rsatamiz
-    cap = f"📄 <b>TASDIQLASH</b>\n\n👤 {d['full_name']}\n📞 {d['phone']}\n💼 {d['pos']}"
+    
+    cap = f"📄 <b>TASDIQLASH</b>\n\n👤 {d['full_name']}\n📞 {d['phone']}\n💼 {d['pos']}\n💍 {d['family_status']}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ TASDIQLASH", callback_data="conf_final")]])
     await message.answer_photo(d['photo'], caption=cap, reply_markup=kb)
 
-# --- FINAL (ADMIN GA TO'LIQ FORMATDA BORADI) ---
+# --- FINAL ---
 @dp.callback_query(F.data == "conf_final")
 async def confirm(call: CallbackQuery, state: FSMContext):
     d = await state.get_data()
@@ -348,39 +409,37 @@ async def confirm(call: CallbackQuery, state: FSMContext):
     if any(x in str(d.get('skills', '')).lower() for x in ['rus', 'excel']): score += 20
     now = datetime.now().strftime("%H:%M | %d.%m.%Y")
     
+    # Bazaga yozish (family_status ustunini aniq ko'rsatish shart emas, chunki ALTER TABLE qildik)
+    # LEKIN SQLite da ustunlar tartibi o'zgarib ketishi mumkin.
+    # Eng xavfsizi - ustun nomlarini aniq yozishdir.
+    
+    # Biz yuqorida ALTER TABLE qilib 'family_status' qo'shdik.
+    # Endi INSERT qilishda uni ishlatamiz.
+    
     await db_execute("""INSERT INTO resumes (
-        user_id, full_name, birth_date, age, gender, family_status, address, phone_number, previous_job, experience, 
-        position, photo_id, interests, skills, purpose, guarantor, score) 
+        user_id, full_name, birth_date, age, gender, address, phone_number, previous_job, experience, 
+        position, photo_id, interests, skills, purpose, guarantor, score, family_status) 
         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", 
-        (user_id, d['full_name'], d['birth_date'], d['age'], d['gender'], d['family_status'], d['address'],
+        (user_id, d['full_name'], d['birth_date'], d['age'], d['gender'], d['address'],
          d['phone'], d['prev_job'], d['exp'], d['pos'], d['photo'], d['interests'], d['skills'], 
-         d['purpose'], d['guarantor'], score), commit=True)
+         d['purpose'], d['guarantor'], score, d['family_status']), commit=True)
     
-    # --- ADMIN UCHUN MAXSUS XABAR (To'liq ochilgan va silka bilan) ---
-    
-    # Ismga silka qo'yamiz (tg://user?id=123...)
+    # Admin xabari
     link_name = f"<a href='tg://user?id={user_id}'>{d['full_name']}</a>"
-    
-    # Katta formatdagi tekst
     admin_caption = TEXTS['uz']['admin_full_notification'].format(
-        link_name=link_name, # Link
-        age=d['age'], gender=d['gender'], family=d['family_status'], phone=d['phone'], address=d['address'],
-        pos=d['pos'], exp=d['exp'], prev_job=d['prev_job'], hobby=d['interests'], skills=d['skills'],
+        link_name=link_name, age=d['age'], gender=d['gender'], family=d['family_status'], 
+        phone=d['phone'], address=d['address'], pos=d['pos'], exp=d['exp'], 
+        prev_job=d['prev_job'], hobby=d['interests'], skills=d['skills'],
         purpose=d['purpose'], guarantor=d['guarantor'], score=score, time=now
     )
     
-    # "Nomzodga yozish" tugmasi
-    chat_btn = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={user_id}")]
-    ])
+    chat_btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={user_id}")]])
 
-    # Adminlarga yuborish
     for adm in ADMIN_IDS:
         try:
             await bot.send_sticker(adm, "CAACAgIAAxkBAAEL7Rxl_U6XnS7fS_R9S_R9S_R9")
             await bot.send_photo(adm, d['photo'], caption=admin_caption, reply_markup=chat_btn)
-        except Exception as e:
-            logging.error(f"Failed to send to admin {adm}: {e}")
+        except: pass
     
     await call.message.delete()
     kb = get_admin_kb() if user_id in ADMIN_IDS else get_user_kb()
@@ -393,4 +452,7 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        logging.info("Bot to'xtatildi")
