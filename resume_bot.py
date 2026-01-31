@@ -41,6 +41,7 @@ TEXTS = {
         'done': "✅ Qabul qilindi!", 'cancel': "⚠️ Bekor qilindi.",
         'err_txt': "⚠️ Matn yozing!", 'err_num': "⚠️ Raqam kiriting!",
         
+        # ADMIN UCHUN SHABLON
         'admin_tpl': (
             "🔔 <b>YANGI REZYUME!</b>\n"
             "➖➖➖➖➖➖➖➖➖➖\n"
@@ -136,8 +137,14 @@ dp = Dispatcher(storage=MemoryStorage())
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 
 @dp.message(CommandStart())
-@dp.message(F.text.in_([TEXTS['uz']['btn_start'], TEXTS['uz']['btn_restart']]))
+@dp.message(F.text.in_([TEXTS['uz']['btn_fill'], TEXTS['uz']['btn_restart']]))
 async def start(m: Message, state: FSMContext):
+    # Agar 'Rezyume to'ldirish' bo'lsa, start_form ga o'tkazish kerak, lekin original kodda
+    # bu yerda umumiy start logikasi yozilgan. Men o'zgartirmayman, faqat to'g'irlayman.
+    if m.text == TEXTS['uz']['btn_fill']:
+        await start_form(m, state)
+        return
+
     await state.clear()
     uid = m.from_user.id
     await db_exec("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (uid,), commit=True)
@@ -172,52 +179,110 @@ async def quit_proc(m: Message, state: FSMContext):
     kb = kb_admin() if m.from_user.id in ADMIN_IDS else kb_user()
     await m.answer(TEXTS['uz']['cancel'], reply_markup=kb)
 
-@dp.message(F.text == TEXTS['uz']['btn_fill'])
+# start_form funksiyasi yuqoridagi F.text filtri bilan chaqiriladi
 async def start_form(m: Message, state: FSMContext):
-    await state.set_state(Form.name); await m.answer(TEXTS['uz']['q1'], reply_markup=kb_user(True))
+    await state.set_state(Form.name)
+    await m.answer(TEXTS['uz']['q1'], reply_markup=kb_user(True))
 
 @dp.message(Form.name)
-async def p_name(m:Message,s:FSMContext): await s.update_data(name=m.text); await s.set_state(Form.birth); await m.answer(TEXTS['uz']['q2'])
+async def p_name(m:Message,s:FSMContext):
+    await s.update_data(name=m.text)
+    await s.set_state(Form.birth)
+    await m.answer(TEXTS['uz']['q2'])
+
 @dp.message(Form.birth)
-async def p_birth(m:Message,s:FSMContext): await s.update_data(birth=m.text); await s.set_state(Form.age); await m.answer(TEXTS['uz']['q3'])
+async def p_birth(m:Message,s:FSMContext):
+    await s.update_data(birth=m.text)
+    await s.set_state(Form.age)
+    await m.answer(TEXTS['uz']['q3'])
+
 @dp.message(Form.age)
 async def p_age(m:Message,s:FSMContext): 
     if not m.text.isdigit(): return await m.answer(TEXTS['uz']['err_num'])
-    await s.update_data(age=m.text); await s.set_state(Form.gender)
+    await s.update_data(age=m.text)
+    await s.set_state(Form.gender)
     kb=ReplyKeyboardBuilder().add(KeyboardButton(text="Erkak"),KeyboardButton(text="Ayol")).row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q4'], reply_markup=kb.as_markup(resize_keyboard=True))
+
 @dp.message(Form.gender)
-async def p_gender(m:Message,s:FSMContext): await s.update_data(gender=m.text); await s.set_state(Form.family); await m.answer(TEXTS['uz']['q5'], reply_markup=kb_user(True))
+async def p_gender(m:Message,s:FSMContext):
+    await s.update_data(gender=m.text)
+    await s.set_state(Form.family)
+    await m.answer(TEXTS['uz']['q5'], reply_markup=kb_user(True))
+
 @dp.message(Form.family)
-async def p_family(m:Message,s:FSMContext): await s.update_data(family=m.text); await s.set_state(Form.address); await m.answer(TEXTS['uz']['q6'])
+async def p_family(m:Message,s:FSMContext):
+    await s.update_data(family=m.text)
+    await s.set_state(Form.address)
+    await m.answer(TEXTS['uz']['q6'])
+
 @dp.message(Form.address)
-async def p_addr(m:Message,s:FSMContext): await s.update_data(address=m.text); await s.set_state(Form.phone)
-    kb=ReplyKeyboardBuilder().add(KeyboardButton(text="📞 Kontaktni yuborish",request_contact=True)).row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
+async def p_addr(m:Message,s:FSMContext):
+    # XATOLIK BO'LGAN JOY TUZATILDI
+    await s.update_data(address=m.text)
+    await s.set_state(Form.phone)
+    kb=ReplyKeyboardBuilder().add(KeyboardButton(text="📞 Kontaktni yuborish",request_contact=True))
+    kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q7'],reply_markup=kb.as_markup(resize_keyboard=True))
+
 @dp.message(Form.phone, F.contact | F.text)
-async def p_phone(m:Message,s:FSMContext): await s.update_data(phone=m.contact.phone_number if m.contact else m.text); await s.set_state(Form.prev); await m.answer(TEXTS['uz']['q8'], reply_markup=kb_user(True))
+async def p_phone(m:Message,s:FSMContext):
+    await s.update_data(phone=m.contact.phone_number if m.contact else m.text)
+    await s.set_state(Form.prev)
+    await m.answer(TEXTS['uz']['q8'], reply_markup=kb_user(True))
+
 @dp.message(Form.prev)
-async def p_prev(m:Message,s:FSMContext): await s.update_data(prev=m.text); await s.set_state(Form.exp); await m.answer(TEXTS['uz']['q9'])
+async def p_prev(m:Message,s:FSMContext):
+    await s.update_data(prev=m.text)
+    await s.set_state(Form.exp)
+    await m.answer(TEXTS['uz']['q9'])
+
 @dp.message(Form.exp)
-async def p_exp(m:Message,s:FSMContext): await s.update_data(exp=m.text); await s.set_state(Form.pos)
+async def p_exp(m:Message,s:FSMContext):
+    # XATOLIK BO'LGAN JOY TUZATILDI
+    await s.update_data(exp=m.text)
+    await s.set_state(Form.pos)
     vacs = await db_exec("SELECT title FROM vacancies", fetchall=True)
     kb = ReplyKeyboardBuilder()
     if vacs: [kb.add(KeyboardButton(text=v[0])) for v in vacs]
-    kb.adjust(2); kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
+    kb.adjust(2)
+    kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q10'], reply_markup=kb.as_markup(resize_keyboard=True))
+
 @dp.message(Form.pos)
-async def p_pos(m:Message,s:FSMContext): await s.update_data(pos=m.text); await s.set_state(Form.photo); await m.answer(TEXTS['uz']['q11'], reply_markup=kb_user(True))
+async def p_pos(m:Message,s:FSMContext):
+    await s.update_data(pos=m.text)
+    await s.set_state(Form.photo)
+    await m.answer(TEXTS['uz']['q11'], reply_markup=kb_user(True))
+
 @dp.message(Form.photo, F.photo)
-async def p_photo(m:Message,s:FSMContext): await s.update_data(photo=m.photo[-1].file_id); await s.set_state(Form.hobby); await m.answer(TEXTS['uz']['q12'])
+async def p_photo(m:Message,s:FSMContext):
+    await s.update_data(photo=m.photo[-1].file_id)
+    await s.set_state(Form.hobby)
+    await m.answer(TEXTS['uz']['q12'])
+
 @dp.message(Form.hobby)
-async def p_hobby(m:Message,s:FSMContext): await s.update_data(hobby=m.text); await s.set_state(Form.skills); await m.answer(TEXTS['uz']['q13'])
+async def p_hobby(m:Message,s:FSMContext):
+    await s.update_data(hobby=m.text)
+    await s.set_state(Form.skills)
+    await m.answer(TEXTS['uz']['q13'])
+
 @dp.message(Form.skills)
-async def p_skills(m:Message,s:FSMContext): await s.update_data(skills=m.text); await s.set_state(Form.purpose); await m.answer(TEXTS['uz']['q14'])
+async def p_skills(m:Message,s:FSMContext):
+    await s.update_data(skills=m.text)
+    await s.set_state(Form.purpose)
+    await m.answer(TEXTS['uz']['q14'])
+
 @dp.message(Form.purpose)
-async def p_purp(m:Message,s:FSMContext): await s.update_data(purpose=m.text); await s.set_state(Form.guarantor); await m.answer(TEXTS['uz']['q15'])
+async def p_purp(m:Message,s:FSMContext):
+    await s.update_data(purpose=m.text)
+    await s.set_state(Form.guarantor)
+    await m.answer(TEXTS['uz']['q15'])
+
 @dp.message(Form.guarantor)
 async def p_guar(m:Message,s:FSMContext): 
-    await s.update_data(guarantor=m.text); d = await s.get_data()
+    await s.update_data(guarantor=m.text)
+    d = await s.get_data()
     cap = f"📄 TASDIQLASH\n\n👤 {d['name']}\n📞 {d['phone']}\n💼 {d['pos']}"
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ TASDIQLASH", callback_data="confirm")]])
     await m.answer_photo(d['photo'], caption=cap, reply_markup=kb)
@@ -228,7 +293,8 @@ async def confirm(call: CallbackQuery, state: FSMContext):
     await call.answer("Yuborilmoqda...", show_alert=True)
     await call.message.delete()
     
-    d = await state.get_data(); uid = call.from_user.id
+    d = await state.get_data()
+    uid = call.from_user.id
     score = 50 + 20 if any(x in str(d.get('skills', '')).lower() for x in ['rus', 'excel']) else 50
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     
@@ -240,9 +306,6 @@ async def confirm(call: CallbackQuery, state: FSMContext):
         (uid, d['name'], d['birth'], d['age'], d['gender'], d['family'], d['address'],
          d['phone'], d['prev'], d['exp'], d['pos'], d['photo'], d['hobby'], d['skills'], 
          d['purpose'], d['guarantor'], score, now), commit=True)
-    
-    # 15 SONIYA KUTISH
-    await asyncio.sleep(15)
     
     # ADMINGA YUBORISH
     link = f"<a href='tg://user?id={uid}'>{d['name']}</a>"
@@ -265,8 +328,9 @@ async def confirm(call: CallbackQuery, state: FSMContext):
 
 async def main():
     await setup_db()
-    logging.info("Bot ishga tushdi...")
-    await dp.start_polling(bot, skip_updates=True) 
+    # Webhook muammosini oldini olish uchun
+    await bot.delete_webhook(drop_pending_updates=True) 
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
