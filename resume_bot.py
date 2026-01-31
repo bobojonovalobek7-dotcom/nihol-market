@@ -18,7 +18,7 @@ from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 # ================= 1. SOZLAMALAR =================
 # Tokenni shu yerga yozing
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8593426346:AAG9mRz-mYs79vTalBK-twGcQFTu7JbGAFo")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAGvOLyfs3t3nK2eGdkzxy1Qb_6A--xhieA")
 
 # Xabar boradigan Adminlar (Barchasi)
 ADMIN_IDS = [356009218, 5341602920, 5777142647]
