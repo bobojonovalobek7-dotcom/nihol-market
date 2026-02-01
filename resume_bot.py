@@ -18,7 +18,7 @@ from aiogram.types import (
 from aiogram.utils.keyboard import ReplyKeyboardBuilder
 
 # ================= 1. SOZLAMALAR =================
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8517355501:AAHrcoUDFtqrmiSYGyHlhBszPXz-2TRQ9D4")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8542250212:AAFlRdElR2y08jWkDFGfS2NgpE05051bojY")
 ADMIN_IDS = [356009218, 5341602920, 5777142647]
 DB_FILE = "resume_bot_final.db"
 
