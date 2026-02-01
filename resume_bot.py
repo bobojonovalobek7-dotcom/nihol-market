@@ -24,51 +24,79 @@ DB_FILE = "resume_bot_final.db"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
-# ================= 2. MATNLAR =================
+# ================= 2. MATNLAR (CHIROYLI DIZAYN) =================
 TEXTS = {
     'uz': {
-        'welcome': "👋 <b>Assalomu alaykum!</b>\nAnketani to'ldirishni boshlang.",
-        'welcome_admin': "👑 <b>Admin Panel</b>",
-        'btn_fill': "📄 Rezyume to'ldirish",
-        'btn_restart': "🔄 Qayta ishga tushirish",
+        'welcome': (
+            "👋 <b>Assalomu alaykum!</b>\n\n"
+            "<b>Nihol Market</b> jamoasiga qo'shilish istagida ekanligingizdan xursandmiz.\n"
+            "Ishga kirish uchun quyidagi anketani to'ldirishingiz kerak.\n\n"
+            "<i>Boshlash uchun pastdagi tugmani bosing</i> 👇"
+        ),
+        'welcome_admin': "👑 <b>Admin Panelga xush kelibsiz!</b>",
+        
+        # Tugmalar
+        'btn_fill': "✍️ Anketani to'ldirish",
+        'btn_restart': "🔄 Boshidan boshlash",
         'btn_cancel': "❌ Bekor qilish",
         'btn_view': "📂 Rezyumelar (20)",
         'btn_stats': "📊 Statistika",
-        'q1':"1. F.I.O kiriting:", 
-        'q2':"2. Tug'ilgan sana:", 
-        'q3':"3. Yosh:", 
-        'q4':"4. Jins:",
-        'q5':"5. Oilaviy holat:", 
-        'q6':"6. Manzil:", 
-        'q7':"7. Telefon:", 
-        'q8':"8. Oldingi ish joy:",
-        'q9':"9. Tajriba:", 
-        'q10':"10. Lavozim:", 
-        'q11':"11. Rasm:", 
-        'q12':"12. Qiziqishlar:",
-        'q13':"13. Bilimlar:", 
-        'q14':"14. Maqsad:", 
-        'q15':"15. Kafil:",
-        'done': "✅ Qabul qilindi!", 
-        'cancel': "⚠️ Bekor qilindi.",
-        'err_txt': "⚠️ Matn yozing!", 
-        'err_num': "⚠️ Raqam kiriting!",
+        'btn_phone': "📞 Kontaktni yuborish",
+        
+        # Savollar
+        'q1': (
+            "<b>1. To'liq ism-familiyangizni kiriting:</b>\n\n"
+            "<i>Masalan: Abdullayev Abdulla Abdulla o'g'li</i>"
+        ),
+        'q2': (
+            "<b>2. Tug'ilgan sanangizni kiriting:</b>\n\n"
+            "<i>Format: kun.oy.yil (Masalan: 15.04.2000)</i>"
+        ),
+        'q3': "<b>3. Yoshingiz nechida?</b>\n\n<i>Faqat raqam yozing (Masalan: 22)</i>",
+        'q4': "<b>4. Jinsingizni tanlang:</b> 👇",
+        'q5': "<b>5. Oilaviy holatingiz qanday?</b>\n\n<i>(Bo'ydoq, Oilali, Ajrashgan)</i>",
+        'q6': "<b>6. Yashash manzilingizni kiriting:</b>\n\n<i>Tuman, mahalla va ko'cha nomi</i>",
+        'q7': (
+            "<b>7. Telefon raqamingizni yuboring:</b>\n\n"
+            "Pastdagi <b>\"📞 Kontaktni yuborish\"</b> tugmasini bosing 👇"
+        ),
+        'q8': "<b>8. Avval qayerda ishlagansiz?</b>\n\n<i>Ish joyi nomi va vazifangizni yozing (Agar ishlamagan bo'lsangiz 'Yo'q' deb yozing)</i>",
+        'q9': "<b>9. Umumiy ish tajribangiz qancha?</b>\n\n<i>(Masalan: 1 yil, 6 oy yoki Yo'q)</i>",
+        'q10': "<b>10. Qaysi lavozimda ishlamoqchisiz?</b>\n\n<i>Quyidagi bo'limlardan birini tanlang</i> 👇",
+        'q11': (
+            "<b>11. O'zingizni rasmingizni yuboring:</b>\n\n"
+            "<i>Iltimos, yuzi aniq tushgan rasm bo'lsin.</i>"
+        ),
+        'q12': "<b>12. Qiziqishlaringiz (Hobby) nimalar?</b>",
+        'q13': "<b>13. Qo'shimcha bilimlaringiz:</b>\n\n<i>(Til bilish darajasi, Kompyuter dasturlari va h.k)</i>",
+        'q14': "<b>14. Ishlashdan maqsadingiz nima?</b>",
+        'q15': "<b>15. Sizga kim tavsiya beradi (Kafil)?</b>\n\n<i>Ismi va telefon raqamini yozing (Yoki 'O'zim' deb yozing)</i>",
+        
+        # Yakuniy xabarlar
+        'done': (
+            "✅ <b>Tabriklaymiz! Sizning anketangiz qabul qilindi.</b>\n\n"
+            "Tez orada mutaxassislarimiz siz bilan bog'lanishadi.\n"
+            "E'tiboringiz uchun rahmat!"
+        ),
+        'cancel': "⚠️ <b>Anketa bekor qilindi.</b> Qaytadan boshlash uchun tugmani bosing.",
+        'err_txt': "⚠️ <b>Iltimos, matn ko'rinishida yozing!</b>",
+        'err_num': "⚠️ <b>Iltimos, faqat raqam kiriting!</b>",
         
         # ADMIN UCHUN SHABLON
         'admin_tpl': (
-            "🔔 <b>YANGI REZYUME!</b>\n"
-            "➖➖➖➖➖➖➖➖➖➖\n"
-            "👤 <b>{link}</b>\n"
+            "🔔 <b>YANGI REZYUME KELDI!</b>\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖\n"
+            "👤 <b>Nomzod:</b> {link}\n"
             "📅 <b>Yosh:</b> {age}\n"
             "🚻 <b>Jins:</b> {gender}\n"
             "💍 <b>Oila:</b> {family}\n"
             "📞 <b>Tel:</b> {phone}\n"
             "📍 <b>Manzil:</b> {address}\n"
-            "➖➖➖➖➖➖➖➖➖➖\n"
-            "💼 <b>Lavozim:</b> {pos}\n"
+            "➖➖➖➖➖➖➖➖➖➖➖➖\n"
+            "💼 <b>Vakansiya:</b> {pos}\n"
             "📝 <b>Tajriba:</b> {exp}\n"
             "🏢 <b>Eski ish:</b> {prev}\n"
-            "⚽ <b>Qiziqishlar:</b> {hobby}\n"
+            "⚽ <b>Qiziqish:</b> {hobby}\n"
             "💻 <b>Bilimlar:</b> {skills}\n"
             "🎯 <b>Maqsad:</b> {purpose}\n"
             "🤝 <b>Kafil:</b> {guarantor}\n"
@@ -172,7 +200,7 @@ async def stats(m: Message):
 async def view_resumes(m: Message):
     if m.from_user.id not in ADMIN_IDS: return
     res = await db_exec("SELECT id, name, pos FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
-    if not res: return await m.answer("📭 Bo'sh")
+    if not res: return await m.answer("📭 Hozircha rezyumelar yo'q")
     
     kb = ReplyKeyboardBuilder()
     for r in res: kb.add(KeyboardButton(text=f"{r[1]} | {r[2]}"))
@@ -209,7 +237,8 @@ async def p_age(m: Message, state: FSMContext):
         return await m.answer(TEXTS['uz']['err_num'])
     await state.update_data(age=m.text)
     await state.set_state(Form.gender)
-    kb = ReplyKeyboardBuilder().add(KeyboardButton(text="Erkak"), KeyboardButton(text="Ayol"))
+    kb = ReplyKeyboardBuilder()
+    kb.add(KeyboardButton(text="👨 Erkak"), KeyboardButton(text="👩 Ayol"))
     kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q4'], reply_markup=kb.as_markup(resize_keyboard=True))
 
@@ -230,7 +259,7 @@ async def p_addr(m: Message, state: FSMContext):
     await state.update_data(address=m.text)
     await state.set_state(Form.phone)
     kb = ReplyKeyboardBuilder()
-    kb.add(KeyboardButton(text="📞 Kontaktni yuborish", request_contact=True))
+    kb.add(KeyboardButton(text=TEXTS['uz']['btn_phone'], request_contact=True))
     kb.row(KeyboardButton(text=TEXTS['uz']['btn_cancel']))
     await m.answer(TEXTS['uz']['q7'], reply_markup=kb.as_markup(resize_keyboard=True))
 
@@ -294,7 +323,15 @@ async def p_purp(m: Message, state: FSMContext):
 async def p_guar(m: Message, state: FSMContext): 
     await state.update_data(guarantor=m.text)
     d = await state.get_data()
-    cap = f"📄 TASDIQLASH\n\n👤 {d['name']}\n📞 {d['phone']}\n💼 {d['pos']}"
+    
+    cap = (
+        "📄 <b>MA'LUMOTLARNI TASDIQLASH</b>\n\n"
+        f"👤 <b>Ism:</b> {d['name']}\n"
+        f"📞 <b>Tel:</b> {d['phone']}\n"
+        f"💼 <b>Lavozim:</b> {d['pos']}\n\n"
+        "<i>Ma'lumotlar to'g'ri bo'lsa, <b>TASDIQLASH</b> tugmasini bosing.</i>"
+    )
+    
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ TASDIQLASH", callback_data="confirm")]])
     await m.answer_photo(d['photo'], caption=cap, reply_markup=kb)
 
@@ -302,16 +339,14 @@ async def p_guar(m: Message, state: FSMContext):
 @dp.callback_query(F.data == "confirm")
 async def confirm(call: CallbackQuery, state: FSMContext):
     await call.answer("Yuborilmoqda...", show_alert=True)
-    await call.message.delete()
+    await call.message.edit_reply_markup(reply_markup=None)
     
     d = await state.get_data()
     uid = call.from_user.id
     
-    # Ballni hisoblash
     score = 50
     skills = str(d.get('skills', '')).lower()
-    if 'rus' in skills or 'excel' in skills:
-        score += 20
+    if 'rus' in skills or 'excel' in skills: score += 20
         
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
     
@@ -331,7 +366,7 @@ async def confirm(call: CallbackQuery, state: FSMContext):
         address=d['address'], pos=d['pos'], exp=d['exp'], prev=d['prev'], hobby=d['hobby'],
         skills=d['skills'], purpose=d['purpose'], guarantor=d['guarantor'], score=score, time=now
     )
-    btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Yozish", url=f"tg://user?id={uid}")]])
+    btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={uid}")]])
 
     for adm in ADMIN_IDS:
         try:
