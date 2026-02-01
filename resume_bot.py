@@ -24,7 +24,7 @@ DB_FILE = "resume_bot_final.db"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
-# ================= 2. MATNLAR (CHIROYLI DIZAYN) =================
+# ================= 2. MATNLAR =================
 TEXTS = {
     'uz': {
         'welcome': (
@@ -42,49 +42,33 @@ TEXTS = {
         'btn_view': "📂 Rezyumelar (20)",
         'btn_stats': "📊 Statistika",
         'btn_phone': "📞 Kontaktni yuborish",
+        'btn_back': "⬅️ Orqaga",
         
         # Savollar
-        'q1': (
-            "<b>1. To'liq ism-familiyangizni kiriting:</b>\n\n"
-            "<i>Masalan: Abdullayev Abdulla Abdulla o'g'li</i>"
-        ),
-        'q2': (
-            "<b>2. Tug'ilgan sanangizni kiriting:</b>\n\n"
-            "<i>Format: kun.oy.yil (Masalan: 15.04.2000)</i>"
-        ),
+        'q1': "<b>1. To'liq ism-familiyangizni kiriting:</b>\n\n<i>Masalan: Abdullayev Abdulla Abdulla o'g'li</i>",
+        'q2': "<b>2. Tug'ilgan sanangizni kiriting:</b>\n\n<i>Format: kun.oy.yil (Masalan: 15.04.2000)</i>",
         'q3': "<b>3. Yoshingiz nechida?</b>\n\n<i>Faqat raqam yozing (Masalan: 22)</i>",
         'q4': "<b>4. Jinsingizni tanlang:</b> 👇",
         'q5': "<b>5. Oilaviy holatingiz qanday?</b>\n\n<i>(Bo'ydoq, Oilali, Ajrashgan)</i>",
         'q6': "<b>6. Yashash manzilingizni kiriting:</b>\n\n<i>Tuman, mahalla va ko'cha nomi</i>",
-        'q7': (
-            "<b>7. Telefon raqamingizni yuboring:</b>\n\n"
-            "Pastdagi <b>\"📞 Kontaktni yuborish\"</b> tugmasini bosing 👇"
-        ),
+        'q7': "<b>7. Telefon raqamingizni yuboring:</b>\n\nPastdagi <b>\"📞 Kontaktni yuborish\"</b> tugmasini bosing 👇",
         'q8': "<b>8. Avval qayerda ishlagansiz?</b>\n\n<i>Ish joyi nomi va vazifangizni yozing (Agar ishlamagan bo'lsangiz 'Yo'q' deb yozing)</i>",
         'q9': "<b>9. Umumiy ish tajribangiz qancha?</b>\n\n<i>(Masalan: 1 yil, 6 oy yoki Yo'q)</i>",
         'q10': "<b>10. Qaysi lavozimda ishlamoqchisiz?</b>\n\n<i>Quyidagi bo'limlardan birini tanlang</i> 👇",
-        'q11': (
-            "<b>11. O'zingizni rasmingizni yuboring:</b>\n\n"
-            "<i>Iltimos, yuzi aniq tushgan rasm bo'lsin.</i>"
-        ),
+        'q11': "<b>11. O'zingizni rasmingizni yuboring:</b>\n\n<i>Iltimos, yuzi aniq tushgan rasm bo'lsin.</i>",
         'q12': "<b>12. Qiziqishlaringiz (Hobby) nimalar?</b>",
         'q13': "<b>13. Qo'shimcha bilimlaringiz:</b>\n\n<i>(Til bilish darajasi, Kompyuter dasturlari va h.k)</i>",
         'q14': "<b>14. Ishlashdan maqsadingiz nima?</b>",
         'q15': "<b>15. Sizga kim tavsiya beradi (Kafil)?</b>\n\n<i>Ismi va telefon raqamini yozing (Yoki 'O'zim' deb yozing)</i>",
         
-        # Yakuniy xabarlar
-        'done': (
-            "✅ <b>Tabriklaymiz! Sizning anketangiz qabul qilindi.</b>\n\n"
-            "Tez orada mutaxassislarimiz siz bilan bog'lanishadi.\n"
-            "E'tiboringiz uchun rahmat!"
-        ),
+        'done': "✅ <b>Tabriklaymiz! Sizning anketangiz qabul qilindi.</b>\n\nTez orada mutaxassislarimiz siz bilan bog'lanishadi.",
         'cancel': "⚠️ <b>Anketa bekor qilindi.</b> Qaytadan boshlash uchun tugmani bosing.",
         'err_txt': "⚠️ <b>Iltimos, matn ko'rinishida yozing!</b>",
         'err_num': "⚠️ <b>Iltimos, faqat raqam kiriting!</b>",
         
         # ADMIN UCHUN SHABLON
         'admin_tpl': (
-            "🔔 <b>YANGI REZYUME KELDI!</b>\n"
+            "🔔 <b>YANGI REZYUME!</b>\n"
             "➖➖➖➖➖➖➖➖➖➖➖➖\n"
             "👤 <b>Nomzod:</b> {link}\n"
             "📅 <b>Yosh:</b> {age}\n"
@@ -149,10 +133,13 @@ def kb_user(in_process=False):
         b.adjust(1)
     return b.as_markup(resize_keyboard=True)
 
-def kb_admin():
+def kb_admin(back_btn=False):
     b = ReplyKeyboardBuilder()
-    b.row(KeyboardButton(text=TEXTS['uz']['btn_view']), KeyboardButton(text=TEXTS['uz']['btn_stats']))
-    b.row(KeyboardButton(text=TEXTS['uz']['btn_restart']))
+    if back_btn:
+        b.row(KeyboardButton(text=TEXTS['uz']['btn_back']))
+    else:
+        b.row(KeyboardButton(text=TEXTS['uz']['btn_view']), KeyboardButton(text=TEXTS['uz']['btn_stats']))
+        b.row(KeyboardButton(text=TEXTS['uz']['btn_restart']))
     return b.as_markup(resize_keyboard=True)
 
 # ================= 5. STATES (TO'LIQ) =================
@@ -178,7 +165,7 @@ dp = Dispatcher(storage=MemoryStorage())
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 
 @dp.message(CommandStart())
-@dp.message(F.text.in_([TEXTS['uz']['btn_restart']]))
+@dp.message(F.text.in_([TEXTS['uz']['btn_restart'], TEXTS['uz']['btn_back']]))
 async def start(m: Message, state: FSMContext):
     await state.clear()
     uid = m.from_user.id
@@ -188,7 +175,7 @@ async def start(m: Message, state: FSMContext):
     txt = TEXTS['uz']['welcome_admin'] if uid in ADMIN_IDS else TEXTS['uz']['welcome']
     await m.answer(txt, reply_markup=kb)
 
-# --- ADMIN PANEL ---
+# --- ADMIN PANEL: RESUMELAR RO'YXATI ---
 @dp.message(F.text == TEXTS['uz']['btn_stats'])
 async def stats(m: Message):
     if m.from_user.id not in ADMIN_IDS: return
@@ -199,15 +186,57 @@ async def stats(m: Message):
 @dp.message(F.text == TEXTS['uz']['btn_view'])
 async def view_resumes(m: Message):
     if m.from_user.id not in ADMIN_IDS: return
+    # ID, Name, Position ni olamiz
     res = await db_exec("SELECT id, name, pos FROM resumes ORDER BY id DESC LIMIT 20", fetchall=True)
-    if not res: return await m.answer("📭 Hozircha rezyumelar yo'q")
+    
+    if not res: 
+        return await m.answer("📭 Hozircha rezyumelar yo'q")
     
     kb = ReplyKeyboardBuilder()
-    for r in res: kb.add(KeyboardButton(text=f"{r[1]} | {r[2]}"))
+    # Har bir rezyume uchun tugma yasaymiz: "🆔 15 | Ism"
+    for r in res: 
+        kb.add(KeyboardButton(text=f"🆔 {r[0]} | {r[1]}"))
+    
     kb.adjust(1)
-    await m.answer("📂 So'nggi 20 ta:", reply_markup=kb.as_markup(resize_keyboard=True))
+    kb.row(KeyboardButton(text=TEXTS['uz']['btn_back'])) # Orqaga qaytish tugmasi
+    
+    await m.answer("📂 <b>So'nggi 20 ta rezyume:</b>\n<i>Batafsil ko'rish uchun nomzodni tanlang:</i>", reply_markup=kb.as_markup(resize_keyboard=True))
 
-# --- REZYUME TO'LDIRISH ---
+# --- ADMIN PANEL: ID ORQALI REZYUMENI OCHISH ---
+@dp.message(F.text.startswith("🆔"))
+async def show_resume_detail(m: Message):
+    if m.from_user.id not in ADMIN_IDS: return
+    try:
+        # "🆔 15 | Ism" -> ["🆔", "15", "|", "Ism"] -> "15" ni olamiz
+        r_id = m.text.split()[1]
+        
+        # Bazadan to'liq ma'lumotni olish
+        r = await db_exec("SELECT * FROM resumes WHERE id=?", (r_id,), fetchone=True)
+        
+        if not r: 
+            return await m.answer("❌ Bu rezyume topilmadi.")
+
+        # Bazadagi ustunlar tartibi:
+        # 0=id, 1=user_id, 2=name, 3=birth, 4=age, 5=gender, 6=family, 
+        # 7=address, 8=phone, 9=prev, 10=exp, 11=pos, 12=photo, 
+        # 13=hobby, 14=skills, 15=purpose, 16=guarantor, 17=score, 18=date
+
+        link = f"<a href='tg://user?id={r[1]}'>{r[2]}</a>"
+        cap = TEXTS['uz']['admin_tpl'].format(
+            link=link, age=r[4], gender=r[5], family=r[6], phone=r[8],
+            address=r[7], pos=r[11], exp=r[10], prev=r[9], hobby=r[13],
+            skills=r[14], purpose=r[15], guarantor=r[16], score=r[17], time=r[18]
+        )
+        
+        btn = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✉️ Nomzodga yozish", url=f"tg://user?id={r[1]}")]])
+        
+        await m.answer_photo(photo=r[12], caption=cap, reply_markup=btn)
+        
+    except Exception as e:
+        logging.error(f"Resume detail error: {e}")
+        await m.answer("⚠️ Xatolik yuz berdi. Qayta urinib ko'ring.")
+
+# --- USER: REZYUME TO'LDIRISH ---
 @dp.message(F.text == TEXTS['uz']['btn_cancel'])
 async def quit_proc(m: Message, state: FSMContext):
     await state.clear()
